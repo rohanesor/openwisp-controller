@@ -16,6 +16,7 @@ from ..signals import (
     device_deactivated,
     device_group_changed,
     device_name_changed,
+    device_os_changed,
     management_ip_changed,
 )
 from ..validators import device_name_validator, mac_address_validator
@@ -30,7 +31,13 @@ class AbstractDevice(OrgMixin, BaseModel):
     physical properties of a network device
     """
 
-    _changed_checked_fields = ["name", "group_id", "management_ip", "organization_id"]
+    _changed_checked_fields = [
+        "name",
+        "os",
+        "group_id",
+        "management_ip",
+        "organization_id",
+    ]
 
     name = models.CharField(
         max_length=64,
@@ -360,6 +367,20 @@ class AbstractDevice(OrgMixin, BaseModel):
 
             if self._has_config():
                 self.config.set_status_modified()
+
+    def _check_os_changed(self):
+        if self._initial_os == models.DEFERRED:
+            return
+
+        if self._initial_os != self.os:
+            device_os_changed.send(
+                sender=self.__class__,
+                instance=self,
+                os=self.os,
+                old_os=self._initial_os,
+            )
+
+        self._initial_os = self.os
 
     def _check_group_id_changed(self):
         if self._initial_group_id == models.DEFERRED:
