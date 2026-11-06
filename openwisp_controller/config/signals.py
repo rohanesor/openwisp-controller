@@ -45,6 +45,10 @@ device_name_changed = Signal()
 device_name_changed.__doc__ = """
 Providing arguments: ['instance']
 """
+device_os_changed = Signal()
+device_os_changed.__doc__ = """
+Providing arguments: ['instance', 'os', 'old_os']
+"""
 device_group_changed = Signal()
 device_group_changed.__doc__ = """
 Providing arguments: ['instance']
