@@ -459,6 +459,17 @@ class TestDevice(
             device.save()
         handler.assert_not_called()
 
+    def test_device_os_changed_not_emitted_when_os_is_not_saved(self):
+        device = self._create_device(organization=self._get_org(), os="old-os")
+
+        with catch_signal(device_os_changed) as handler:
+            device.os = "unsaved-os"
+            device.save(update_fields=["name"])
+
+        handler.assert_not_called()
+        device.refresh_from_db()
+        self.assertEqual(device.os, "old-os")
+
     def test_device_group_changed_emitted(self):
         org = self._get_org()
         device = self._create_device(name="test", organization=org)
