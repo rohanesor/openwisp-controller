@@ -310,7 +310,7 @@ class AbstractDevice(OrgMixin, BaseModel):
         # after performing the save operation. Hence, the actual value
         # is stored in the "state_adding" variable.
         if not state_adding:
-            self._check_changed_fields()
+            self._check_changed_fields(update_fields=kwargs.get("update_fields"))
 
     def delete(self, using=None, keep_parents=False, check_deactivated=True):
         if check_deactivated and (not self.is_fully_deactivated()):
@@ -319,10 +319,16 @@ class AbstractDevice(OrgMixin, BaseModel):
             )
         return super().delete(using, keep_parents)
 
-    def _check_changed_fields(self):
+    def _check_changed_fields(self, update_fields=None):
         self._get_initial_values_for_checked_fields()
         # Execute method for checked for each field in self._changed_checked_fields
         for field in self._changed_checked_fields:
+            if (
+                field == "os"
+                and update_fields is not None
+                and "os" not in update_fields
+            ):
+                continue
             method = getattr(self, f"_check_{field}_changed", None)
             if callable(method):
                 method()
