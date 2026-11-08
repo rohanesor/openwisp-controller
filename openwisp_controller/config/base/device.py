@@ -16,6 +16,7 @@ from ..signals import (
     device_deactivated,
     device_group_changed,
     device_name_changed,
+    device_os_changed,
     management_ip_changed,
 )
 from ..validators import device_name_validator, mac_address_validator
@@ -30,7 +31,13 @@ class AbstractDevice(OrgMixin, BaseModel):
     physical properties of a network device
     """
 
-    _changed_checked_fields = ["name", "group_id", "management_ip", "organization_id"]
+    _changed_checked_fields = [
+        "name",
+        "os",
+        "group_id",
+        "management_ip",
+        "organization_id",
+    ]
 
     name = models.CharField(
         max_length=64,
@@ -303,7 +310,7 @@ class AbstractDevice(OrgMixin, BaseModel):
         # after performing the save operation. Hence, the actual value
         # is stored in the "state_adding" variable.
         if not state_adding:
-            self._check_changed_fields()
+            self._check_changed_fields(update_fields=kwargs.get("update_fields"))
 
     def delete(self, using=None, keep_parents=False, check_deactivated=True):
         if check_deactivated and (not self.is_fully_deactivated()):
@@ -312,10 +319,16 @@ class AbstractDevice(OrgMixin, BaseModel):
             )
         return super().delete(using, keep_parents)
 
-    def _check_changed_fields(self):
+    def _check_changed_fields(self, update_fields=None):
         self._get_initial_values_for_checked_fields()
         # Execute method for checked for each field in self._changed_checked_fields
         for field in self._changed_checked_fields:
+            if (
+                field == "os"
+                and update_fields is not None
+                and "os" not in update_fields
+            ):
+                continue
             method = getattr(self, f"_check_{field}_changed", None)
             if callable(method):
                 method()
@@ -360,6 +373,20 @@ class AbstractDevice(OrgMixin, BaseModel):
 
             if self._has_config():
                 self.config.set_status_modified()
+
+    def _check_os_changed(self):
+        if self._initial_os == models.DEFERRED:
+            return
+
+        if self._initial_os != self.os:
+            device_os_changed.send(
+                sender=self.__class__,
+                instance=self,
+                os=self.os,
+                old_os=self._initial_os,
+            )
+
+        self._initial_os = self.os
 
     def _check_group_id_changed(self):
         if self._initial_group_id == models.DEFERRED:

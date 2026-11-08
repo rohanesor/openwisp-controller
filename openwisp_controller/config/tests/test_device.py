@@ -15,6 +15,7 @@ from ..signals import (
     device_activated,
     device_group_changed,
     device_name_changed,
+    device_os_changed,
     management_ip_changed,
 )
 from ..validators import device_name_validator, mac_address_validator
@@ -437,6 +438,37 @@ class TestDevice(
         with catch_signal(device_name_changed) as handler:
             self._create_device(organization=self._get_org())
         handler.assert_not_called()
+
+    def test_device_os_changed_emitted(self):
+        device = self._create_device(organization=self._get_org(), os="old-os")
+
+        with catch_signal(device_os_changed) as handler:
+            device.os = "new-os"
+            device.save()
+            handler.assert_called_once_with(
+                signal=device_os_changed,
+                sender=Device,
+                instance=device,
+                os="new-os",
+                old_os="old-os",
+            )
+
+    def test_device_os_changed_not_emitted_on_creation_or_unchanged_save(self):
+        with catch_signal(device_os_changed) as handler:
+            device = self._create_device(organization=self._get_org(), os="test-os")
+            device.save()
+        handler.assert_not_called()
+
+    def test_device_os_changed_not_emitted_when_os_is_not_saved(self):
+        device = self._create_device(organization=self._get_org(), os="old-os")
+
+        with catch_signal(device_os_changed) as handler:
+            device.os = "unsaved-os"
+            device.save(update_fields=["name"])
+
+        handler.assert_not_called()
+        device.refresh_from_db()
+        self.assertEqual(device.os, "old-os")
 
     def test_device_group_changed_emitted(self):
         org = self._get_org()

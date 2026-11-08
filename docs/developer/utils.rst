@@ -306,6 +306,21 @@ The signal is emitted when the device name changes.
 
 It is not emitted when the device is created.
 
+``device_os_changed``
+~~~~~~~~~~~~~~~~~~~~~
+
+**Path**: ``openwisp_controller.config.signals.device_os_changed``
+
+**Arguments**:
+
+- ``instance``: instance of ``Device``.
+- ``os``: new value of ``Device.os``.
+- ``old_os``: previous value of ``Device.os``.
+
+The signal is emitted when an existing device's operating system changes.
+It is not emitted when the device is created or when its operating system
+is unchanged.
+
 ``device_group_changed``
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
